@@ -2,7 +2,7 @@
 
 Illustratorにおけるパターンの繰り返し起点を、対象オブジェクトの左上、または中央に繰り返しの起点をフィットさせ、ついでにパターンに適用されている変形もリセットするIllustrator用のスクリプトです。
 
-[図入りの解説](http://graphicartsunit.tumblr.com/)
+[図入りの解説](http://graphicartsunit.tumblr.com/post/114171698274/illustrator)
 
 -----
 
