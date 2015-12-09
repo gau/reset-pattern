@@ -4,12 +4,12 @@ Copyright (c) 2015 Toshiyuki Takahashi
 Released under the MIT license
 http://opensource.org/licenses/mit-license.php
 http://www.graphicartsunit.com/
-ver. 0.5.0
+ver. 0.5.1
 */
 (function() {
 
 	var SCRIPT_TITLE = 'パターンをリセット';
-	var SCRIPT_VERSION = '0.5.0';
+	var SCRIPT_VERSION = '0.5.1';
 
 	// Settings
 	var settings = {
@@ -18,6 +18,8 @@ ver. 0.5.0
 		'fitObjectOrigin' : true,
 		'fitObjectCenter' : false
 	};
+
+	var errorFlag = false;
 
 	// UI Dialog
 	function mainDialog() {
@@ -104,7 +106,7 @@ ver. 0.5.0
 	dialog.showDialog();
 
 	// Reset Matrix
-	function matrixReset(mtr) {
+	function resetMatrix(mtr) {
 		mtr.mValueA = 1;
 		mtr.mValueB = 0;
 		mtr.mValueC = 0;
@@ -128,22 +130,59 @@ ver. 0.5.0
 
 	// Main Process
 	function originReset() {
-		var items = app.activeDocument.selection;
-		if (!items || items.length < 1) throw('オブジェクトが選択されていません');
+
+		var items = getTargetItems(app.activeDocument.selection);
+
+		if (errorFlag) {
+			if (!confirm('処理できない要素が含まれています。下記のものは対象外です。そのまま処理を続けますか？\n・テキスト\n・シンボル\n・複合シェイプ')) {
+				return;
+			}
+		} else if (!items || items.length < 1) {
+			throw('オブジェクトが選択されていません');
+		}
+
 		for (var i = 0; i < items.length; i++) {
-			if (items[i].typename == 'GroupItem' || items[i].typename == 'SymbolItem') continue;
 			var bounds = items[i].geometricBounds;
+			var parent = items[i].parent;
+			if (parent.typename == 'GroupItem' || parent.typename == 'CompoundPathItem') {
+				while (parent.parent.typename == 'GroupItem' || parent.parent.typename == 'CompoundPathItem') {
+					parent = parent.parent;
+				}
+				bounds = parent.geometricBounds;
+			}
+
 			// Stroke Color Reset
 			if (items[i].strokeColor.typename == 'PatternColor' && settings.resetStroke) {
-				var strokeColorMatrix = matrixReset(items[i].strokeColor.matrix);
+				var strokeColorMatrix = resetMatrix(items[i].strokeColor.matrix);
 				items[i].strokeColor.matrix = setTranslateMatrix(strokeColorMatrix, bounds);
 			}
 			// Fill Color Reset
 			if (items[i].fillColor.typename == 'PatternColor' && settings.resetFill) {
-				var fillColorMatrix = matrixReset(items[i].fillColor.matrix);
+				var fillColorMatrix = resetMatrix(items[i].fillColor.matrix);
 				items[i].fillColor.matrix = setTranslateMatrix(fillColorMatrix, bounds);
 			}
 		}
+	}
+
+	// Get Target Items
+	function getTargetItems(items) {
+		var targetItems = [];
+		for (var i = 0; i < items.length; i++) {
+			if (items[i].typename == 'TextRange' || items[i].typename == 'SymbolItem' || items[i].typename == 'PluginItem') {
+				errorFlag = true;
+			} else {
+				if (items[i].typename == 'PathItem') {
+					targetItems.push(items[i]);
+				} else if(items[i].typename == 'GroupItem') {
+					targetItems = targetItems.concat(getTargetItems(items[i].pageItems));
+				} else if(items[i].typename == 'CompoundPathItem') {
+					targetItems = targetItems.concat(getTargetItems(items[i].pathItems));
+				} else if(items[i].typename == 'TextFrame') {
+					targetItems = targetItems.concat(getTargetItems(items[i].textRanges));
+				}
+			}
+		}
+		return targetItems;
 	}
 
 }());
