@@ -1,22 +1,20 @@
 /*
 パターンをリセット.jsx
-Copyright (c) 2015 Toshiyuki Takahashi
+Copyright (c) 2020 Toshiyuki Takahashi
 Released under the MIT license
 http://opensource.org/licenses/mit-license.php
 http://www.graphicartsunit.com/
-ver. 0.5.1
 */
 (function() {
 
 	var SCRIPT_TITLE = 'パターンをリセット';
-	var SCRIPT_VERSION = '0.5.1';
+	var SCRIPT_VERSION = '0.6.0';
 
 	// Settings
 	var settings = {
 		'resetStroke' : true,
 		'resetFill' : true,
-		'fitObjectOrigin' : true,
-		'fitObjectCenter' : false
+		'fitPosition' : 0,
 	};
 
 	var errorFlag = false;
@@ -30,6 +28,13 @@ ver. 0.5.1
 
 		var unit = 20;
 		var thisObj = this;
+
+		var getSelectedIndex = function(array) {
+			for (var i = 0; i < array.length; i++) {
+				if(array[i].value) return i;
+			}
+			return -1;
+		};
 
 		thisObj.dlg = new Window('dialog', SCRIPT_TITLE + ' - ver.' + SCRIPT_VERSION);
 		thisObj.dlg.margins = [unit * 1.5, unit * 1.5, unit * 1.5, unit * 1.5];
@@ -49,58 +54,76 @@ ver. 0.5.1
 		thisObj.buttonGroup.alignment = 'center';
 		thisObj.buttonGroup.orientation = 'row';
 
-		if(settings.fitObjectOrigin) {
-			settings.fitObjectCenter = false;
-		}
-		thisObj.checkBox = {
+		thisObj.checkBoxes = {
 			'resetFill' : thisObj.settingPanel.add('checkbox', undefined, '塗り'),
 			'resetStroke' : thisObj.settingPanel.add('checkbox', undefined, '線'),
-			'fitObjectOrigin' : thisObj.optionGroup.add('checkbox', undefined, '起点をオブジェクトの左上に合わせる'),
-			'fitObjectCenter' : thisObj.optionGroup.add('checkbox', undefined, '起点をオブジェクトの中央に合わせる')
 		};
-
-		thisObj.checkBox.resetFill.minimumSize = [100, undefined];
-		thisObj.checkBox.resetStroke.minimumSize = [100, undefined];
-
-		for (var key in thisObj.checkBox) {
-			thisObj.checkBox[key].value = settings[key];
-			thisObj.checkBox[key].alignment = 'left';
+		thisObj.checkBoxes.resetFill.minimumSize = [100, undefined];
+		thisObj.checkBoxes.resetStroke.minimumSize = [100, undefined];
+		for (var key in thisObj.checkBoxes) {
+			var checkBox = thisObj.checkBoxes[key];
+			checkBox.name = key;
+			checkBox.value = settings[key];
+			checkBox.alignment = 'left';
+			checkBox.onClick = function() {
+				var name = this.name;
+				settings[name] = thisObj.checkBoxes[name].value;
+				thisObj.updatePreview();
+			};
 		}
+
+		thisObj.radioButtons = [
+			thisObj.optionGroup.add('radiobutton', undefined, '起点をオブジェクトの中央に合わせる'),
+			thisObj.optionGroup.add('radiobutton', undefined, '起点をオブジェクトの左上に合わせる'),
+		];
+		if(settings.fitPosition > thisObj.radioButtons.length - 1 || settings.fitPosition < 0 || isNaN(settings.fitPosition)) {
+			settings.fitPosition = 0;
+		} else {
+			settings.fitPosition = Math.floor(settings.fitPosition);
+		}
+		for (var i = 0; i < thisObj.radioButtons.length; i++) {
+			var radioButton = thisObj.radioButtons[i];
+			radioButton.value = false;
+			radioButton.alignment = 'left';
+			radioButton.onClick = function() {
+				settings.fitPosition = getSelectedIndex(thisObj.radioButtons);
+				thisObj.updatePreview();
+			};
+		}
+		thisObj.radioButtons[settings.fitPosition].value = true;
 
 		thisObj.cancel = thisObj.buttonGroup.add('button', undefined, 'キャンセル', {name: 'cancel'});
 		thisObj.ok = thisObj.buttonGroup.add('button', undefined, '実行', { name:'ok'});
 
-		thisObj.checkBox.fitObjectOrigin.onClick = function() {
-			if(this.value) {
-				thisObj.checkBox.fitObjectCenter.value = false;
-			}
-		}
-		thisObj.checkBox.fitObjectCenter.onClick = function() {
-			if(this.value) {
-				thisObj.checkBox.fitObjectOrigin.value = false;
-			}
-		}
 		thisObj.ok.onClick = function() {
-			for (var key in thisObj.checkBox) {
-				settings[key] = thisObj.checkBox[key].value;
-			}
-			try {
-				originReset();
-			} catch(e) {
-				alert('エラーが発生しましたので処理を中止します\nエラー内容：' + e);
-			} finally {
+			// try {
+				app.redo();
+			// } catch(e) {
+			// 	alert('エラーが発生しましたので処理を中止します\nエラー内容：' + e);
+			// } finally {
 				thisObj.closeDialog();
-			}
+			// }
 		}
 		thisObj.cancel.onClick = function() {
 			thisObj.closeDialog();
 		}
 	};
 	mainDialog.prototype.showDialog = function() {
+		this.updatePreview();
 		this.dlg.show();
 	};
 	mainDialog.prototype.closeDialog = function() {
 		this.dlg.close();
+	};
+	mainDialog.prototype.updatePreview = function() {
+		try {
+			originReset();
+			app.redraw();
+		} catch(e) {
+			alert('エラーが発生しましたので処理を中止します\nエラー内容：' + e);
+		} finally {
+			app.undo();
+		}
 	};
 	var dialog = new mainDialog();
 	dialog.showDialog();
@@ -118,12 +141,12 @@ ver. 0.5.1
 
 	// Set Origin Position
 	function setTranslateMatrix(mtr, bounds) {
-		if(settings.fitObjectOrigin) {
-			mtr.mValueTX = bounds[0];
-			mtr.mValueTY = -bounds[1];
-		} else if(settings.fitObjectCenter) {
+		if(settings.fitPosition === 0) {
 			mtr.mValueTX = (bounds[0]+bounds[2])/2;
 			mtr.mValueTY = (bounds[1]+bounds[3])/-2;
+		} else {
+			mtr.mValueTX = bounds[0];
+			mtr.mValueTY = -bounds[1];
 		}
 		return mtr;
 	}
