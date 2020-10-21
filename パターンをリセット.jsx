@@ -96,13 +96,8 @@ http://www.graphicartsunit.com/
 		thisObj.ok = thisObj.buttonGroup.add('button', undefined, '実行', { name:'ok'});
 
 		thisObj.ok.onClick = function() {
-			// try {
-				app.redo();
-			// } catch(e) {
-			// 	alert('エラーが発生しましたので処理を中止します\nエラー内容：' + e);
-			// } finally {
-				thisObj.closeDialog();
-			// }
+			app.redo();
+			thisObj.closeDialog();
 		}
 		thisObj.cancel.onClick = function() {
 			thisObj.closeDialog();
