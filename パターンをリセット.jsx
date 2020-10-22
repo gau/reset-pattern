@@ -8,7 +8,7 @@ http://www.graphicartsunit.com/
 (function() {
 
 	var SCRIPT_TITLE = 'パターンをリセット';
-	var SCRIPT_VERSION = '0.6.0';
+	var SCRIPT_VERSION = '0.6.1';
 
 	// Settings
 	var settings = {
@@ -108,16 +108,19 @@ http://www.graphicartsunit.com/
 		this.dlg.show();
 	};
 	mainDialog.prototype.closeDialog = function() {
+		app.redraw();
+		app.undo();
 		this.dlg.close();
 	};
 	mainDialog.prototype.updatePreview = function() {
 		try {
 			originReset();
 			app.redraw();
+			var dummy = app.activeDocument.pathItems.add();
+			dummy.remove();
+			app.undo();
 		} catch(e) {
 			alert('エラーが発生しましたので処理を中止します\nエラー内容：' + e);
-		} finally {
-			app.undo();
 		}
 	};
 	var dialog = new mainDialog();
