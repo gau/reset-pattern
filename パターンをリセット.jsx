@@ -8,7 +8,7 @@ http://www.graphicartsunit.com/
 (function() {
 
 	var SCRIPT_TITLE = 'パターンをリセット';
-	var SCRIPT_VERSION = '0.6.3';
+	var SCRIPT_VERSION = '0.6.4';
 
 	// Settings
 	var settings = {
@@ -17,8 +17,9 @@ http://www.graphicartsunit.com/
 		'fitPosition' : 0,
 	};
 
+	var doc = app.activeDocument;
 	var errorFlag = false;
-	var targetItems = getTargetItems(app.activeDocument.selection);
+	var targetItems = getTargetItems(doc.selection);
 
 	// UI Dialog
 	function mainDialog() {
@@ -113,9 +114,9 @@ http://www.graphicartsunit.com/
 	};
 	mainDialog.prototype.updatePreview = function() {
 		try {
-			var isProcess = originReset();
+			originReset();
 			app.redraw();
-			if(isProcess) app.undo();
+			app.undo();
 		} catch(e) {
 			alert('エラーが発生しましたので処理を中止します\nエラー内容：' + e);
 		}
@@ -133,7 +134,9 @@ http://www.graphicartsunit.com/
 	// Main Process
 	function originReset() {
 
-		var isProcess = false;
+		// for undo
+		var dummy = doc.pathItems.add();
+		dummy.remove();
 
 		for (var i = 0; i < targetItems.length; i++) {
 			var bounds = targetItems[i].geometricBounds;
@@ -149,17 +152,14 @@ http://www.graphicartsunit.com/
 			if (targetItems[i].strokeColor.typename == 'PatternColor' && settings.resetStroke) {
 				var strokeColorMatrix = resetMatrix(targetItems[i].strokeColor.matrix);
 				targetItems[i].strokeColor.matrix = setTranslateMatrix(strokeColorMatrix, bounds);
-				isProcess = true;
 			}
 			// Fill Color Reset
 			if (targetItems[i].fillColor.typename == 'PatternColor' && settings.resetFill) {
 				var fillColorMatrix = resetMatrix(targetItems[i].fillColor.matrix);
 				targetItems[i].fillColor.matrix = setTranslateMatrix(fillColorMatrix, bounds);
-				isProcess = true;
 			}
 		}
 
-		return isProcess;
 	}
 
 	// Get Target Items
