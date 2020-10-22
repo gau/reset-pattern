@@ -8,7 +8,7 @@ http://www.graphicartsunit.com/
 (function() {
 
 	var SCRIPT_TITLE = 'パターンをリセット';
-	var SCRIPT_VERSION = '0.6.1';
+	var SCRIPT_VERSION = '0.6.2';
 
 	// Settings
 	var settings = {
@@ -18,6 +18,7 @@ http://www.graphicartsunit.com/
 	};
 
 	var errorFlag = false;
+	var targetItems = getTargetItems(app.activeDocument.selection);
 
 	// UI Dialog
 	function mainDialog() {
@@ -123,48 +124,22 @@ http://www.graphicartsunit.com/
 			alert('エラーが発生しましたので処理を中止します\nエラー内容：' + e);
 		}
 	};
+
+	// Validation & Show dialog
 	var dialog = new mainDialog();
-	dialog.showDialog();
-
-	// Reset Matrix
-	function resetMatrix(mtr) {
-		mtr.mValueA = 1;
-		mtr.mValueB = 0;
-		mtr.mValueC = 0;
-		mtr.mValueD = 1;
-		mtr.mValueTX = 0;
-		mtr.mValueTY = 0;
-		return mtr;
-	}
-
-	// Set Origin Position
-	function setTranslateMatrix(mtr, bounds) {
-		if(settings.fitPosition === 0) {
-			mtr.mValueTX = (bounds[0]+bounds[2])/2;
-			mtr.mValueTY = (bounds[1]+bounds[3])/-2;
-		} else {
-			mtr.mValueTX = bounds[0];
-			mtr.mValueTY = -bounds[1];
-		}
-		return mtr;
+	if (errorFlag && !confirm('処理できない要素が含まれています。下記のアイテムは対象外です。このまま続けますか？\n・テキスト\n・シンボル\n・複合シェイプ')) return false;
+	if (!targetItems || targetItems.length < 1) {
+		alert('対象のオブジェクトが見つかりません');
+	} else {
+		dialog.showDialog();
 	}
 
 	// Main Process
 	function originReset() {
 
-		var items = getTargetItems(app.activeDocument.selection);
-
-		if (errorFlag) {
-			if (!confirm('処理できない要素が含まれています。下記のものは対象外です。そのまま処理を続けますか？\n・テキスト\n・シンボル\n・複合シェイプ')) {
-				return;
-			}
-		} else if (!items || items.length < 1) {
-			throw('オブジェクトが選択されていません');
-		}
-
-		for (var i = 0; i < items.length; i++) {
-			var bounds = items[i].geometricBounds;
-			var parent = items[i].parent;
+		for (var i = 0; i < targetItems.length; i++) {
+			var bounds = targetItems[i].geometricBounds;
+			var parent = targetItems[i].parent;
 			if (parent.typename == 'GroupItem' || parent.typename == 'CompoundPathItem') {
 				while (parent.parent.typename == 'GroupItem' || parent.parent.typename == 'CompoundPathItem') {
 					parent = parent.parent;
@@ -173,14 +148,14 @@ http://www.graphicartsunit.com/
 			}
 
 			// Stroke Color Reset
-			if (items[i].strokeColor.typename == 'PatternColor' && settings.resetStroke) {
-				var strokeColorMatrix = resetMatrix(items[i].strokeColor.matrix);
-				items[i].strokeColor.matrix = setTranslateMatrix(strokeColorMatrix, bounds);
+			if (targetItems[i].strokeColor.typename == 'PatternColor' && settings.resetStroke) {
+				var strokeColorMatrix = resetMatrix(targetItems[i].strokeColor.matrix);
+				targetItems[i].strokeColor.matrix = setTranslateMatrix(strokeColorMatrix, bounds);
 			}
 			// Fill Color Reset
-			if (items[i].fillColor.typename == 'PatternColor' && settings.resetFill) {
-				var fillColorMatrix = resetMatrix(items[i].fillColor.matrix);
-				items[i].fillColor.matrix = setTranslateMatrix(fillColorMatrix, bounds);
+			if (targetItems[i].fillColor.typename == 'PatternColor' && settings.resetFill) {
+				var fillColorMatrix = resetMatrix(targetItems[i].fillColor.matrix);
+				targetItems[i].fillColor.matrix = setTranslateMatrix(fillColorMatrix, bounds);
 			}
 		}
 	}
@@ -204,6 +179,29 @@ http://www.graphicartsunit.com/
 			}
 		}
 		return targetItems;
+	}
+
+	// Reset Matrix
+	function resetMatrix(mtr) {
+		mtr.mValueA = 1;
+		mtr.mValueB = 0;
+		mtr.mValueC = 0;
+		mtr.mValueD = 1;
+		mtr.mValueTX = 0;
+		mtr.mValueTY = 0;
+		return mtr;
+	}
+
+	// Set Origin Position
+	function setTranslateMatrix(mtr, bounds) {
+		if(settings.fitPosition === 0) {
+			mtr.mValueTX = (bounds[0]+bounds[2])/2;
+			mtr.mValueTY = (bounds[1]+bounds[3])/-2;
+		} else {
+			mtr.mValueTX = bounds[0];
+			mtr.mValueTY = -bounds[1];
+		}
+		return mtr;
 	}
 
 }());
